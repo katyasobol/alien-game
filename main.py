@@ -1,107 +1,145 @@
 import pygame
 import random
 
-# Initialize Pygame
 pygame.init()
 
-# Set up the game window
-screen_width = 600
+screen_width = 800
 screen_height = 600
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Snake Game")
+pygame.display.set_caption("Space Invaders")
 
-# Define colors
-white = (255, 255, 255)
-black = (0, 0, 0)
-red = (255, 0, 0)
+player_width = 64
+player_height = 64
+player_pos = [screen_width // 2 - player_width //
+              2, screen_height - player_height - 10]
+player_speed = 5
 
-# Set up the snake and food
-block_size = 10
-clock = pygame.time.Clock()
+alien_width = 64
+alien_height = 64
+alien_pos = [random.randint(
+    0, screen_width - alien_width), random.randint(50, 150)]
+alien_speed = 0.5
 
-# Define the font
-font = pygame.font.SysFont(None, 25)
+bullet_width = 8
+bullet_height = 24
+bullet_pos = [0, 0]
+bullet_speed = 7
+bullet_state = "ready"
 
-# Define a function to display text on the screen
+score = 0
+
+player_img = pygame.image.load("images/player.jpg")
+alien_img = pygame.image.load("images/alien.jpg")
 
 
-def message_to_screen(msg, color):
-    screen_text = font.render(msg, True, color)
-    screen.blit(screen_text, [screen_width/6, screen_height/2])
-
-# Define the game loop
+def draw_player():
+    screen.blit(player_img, player_pos)
 
 
-def gameLoop():
-    game_over = False
-    game_close = False
+def draw_alien():
+    screen.blit(alien_img, alien_pos)
 
-    x1 = screen_width / 2
-    y1 = screen_height / 2
 
-    x1_change = 0
-    y1_change = 0
+def move_player(direction):
+    global player_pos
+    if direction == "left":
+        player_pos[0] -= player_speed
+    elif direction == "right":
+        player_pos[0] += player_speed
+    if player_pos[0] < 0:
+        player_pos[0] = 0
+    elif player_pos[0] > screen_width - player_width:
+        player_pos[0] = screen_width - player_width
 
-    # Create the food
-    foodx = round(random.randrange(0, screen_width - block_size) / 10.0) * 10.0
-    foody = round(random.randrange(
-        0, screen_height - block_size) / 10.0) * 10.0
 
-    # Set up the snake
-    snake_List = []
-    Length_of_snake = 1
+def fire_bullet():
+    global bullet_state, bullet_pos
+    if bullet_state == "ready":
+        bullet_state = "fired"
+        bullet_pos = [player_pos[0] + player_width // 2 -
+                      bullet_width // 2, player_pos[1] - bullet_height]
 
-    # Main game loop
-    while not game_over:
 
-        while game_close == True:
-            screen.fill(white)
-            message_to_screen("You Lost! Press Q-Quit or C-Play Again", red)
-            pygame.display.update()
+def move_bullet():
+    global bullet_pos, bullet_state
+    if bullet_state == "fired":
+        bullet_pos[1] -= bullet_speed
+        if bullet_pos[1] < 0:
+            bullet_state = "ready"
 
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        game_over = True
-                        game_close = False
-                    if event.key == pygame.K_c:
-                        gameLoop()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_over = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    x1_change = -block_size
-                    y1_change = 0
-                elif event.key == pygame.K_RIGHT:
-                    x1_change = block_size
-                    y1_change = 0
-                elif event.key == pygame.K_UP:
-                    y1_change = -block_size
-                    x1_change = 0
-                elif event.key == pygame.K_DOWN:
-                    y1_change = block_size
-                    x1_change = 0
+def detect_collision():
+    global score, alien_pos, bullet_pos, bullet_state
+    distance = ((alien_pos[0] - bullet_pos[0]) ** 2 +
+                (alien_pos[1] - bullet_pos[1]) ** 2) ** 0.5
+    if distance < 32:
+        score += 1
+        alien_pos = [random.randint(
+            0, screen_width - alien_width), random.randint(50, 150)]
+        bullet_state = "ready"
 
-        # Check for collisions with the walls
-        if x1 >= screen_width or x1 < 0 or y1 >= screen_height or y1 < 0:
-            game_close = True
 
-        # Update the position of the snake
-        x1 += x1_change
-        y1 += y1_change
+def draw_score():
+    font = pygame.font.Font(None, 36)
+    score_text = font.render("Score: " + str(score), True, (255, 255, 255))
+    screen.blit(score_text, (10, 10))
 
-        # Draw the snake and food on the screen
-        screen.fill(white)
-        pygame.draw.rect(screen, red, [foodx, foody, block_size, block_size])
-        snake_Head = []
-        snake_Head.append(x1)
-        snake_Head.append(y1)
-        snake_List.append(snake_Head)
-        if len(snake_List) > Length_of_snake:
-            del snake_List[0]
 
-        for x in snake_List[:-1]:
-            if x == snake_Head:
-                game_close = True
+def game_over():
+    font = pygame.font.Font(None, 36)
+    game_over_text = font.render("Game Over", True, (255, 0, 0))
+    screen.blit(game_over_text, (screen_width //
+                2 - 100, screen_height // 2 - 18))
+    pygame.display.update()
+    pygame.time.delay(2000)
+    pygame.quit()
+    quit()
+
+
+def game_victory():
+    font = pygame.font.Font(None, 36)
+    victory_text = font.render("Victory!", True, (0, 255, 0))
+    screen.blit(victory_text, (screen_width //
+                2 - 70, screen_height // 2 - 18))
+    pygame.display.update()
+    pygame.time.delay(2000)
+    pygame.quit()
+    quit()
+
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                move_player("left")
+            elif event.key == pygame.K_RIGHT:
+                move_player("right")
+            elif event.key == pygame.K_SPACE:
+                fire_bullet()
+
+    move_bullet()
+    detect_collision()
+
+    if alien_pos[1] > screen_height - alien_height:
+        game_over()
+
+    alien_pos[1] += alien_speed
+    if alien_pos[1] > screen_height:
+        game_victory()
+
+    screen.fill((0, 0, 0))
+    draw_player()
+    draw_alien()
+    draw_score()
+
+    if bullet_state == "fired":
+        pygame.draw.rect(screen, (255, 255, 255),
+                         (bullet_pos[0], bullet_pos[1], bullet_width, bullet_height))
+
+    pygame.display.flip()
+
+pygame.quit()
+quit()
